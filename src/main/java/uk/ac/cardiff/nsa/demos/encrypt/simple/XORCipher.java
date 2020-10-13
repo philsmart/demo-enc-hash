@@ -9,6 +9,7 @@ import javax.annotation.Nonnull;
 
 import uk.ac.cardiff.nsa.demos.encrypt.Cipher;
 import uk.ac.cardiff.nsa.demos.encrypt.DecryptingException;
+import uk.ac.cardiff.nsa.demos.encrypt.Utils;
 
 public class XORCipher implements Cipher {
 
@@ -25,7 +26,6 @@ public class XORCipher implements Cipher {
 
     }
 
-    @Override
     public String encrypt(final String message) {
 
         final byte[] messageInBytes = message.getBytes();
@@ -38,11 +38,11 @@ public class XORCipher implements Cipher {
             for (int j = 0; j < key.length; j++) {
                 encrypted[i + j] = (byte) (paddedMessage[i + j] ^ key[j]);
 
-                // System.out.println("---------------------");
-                // System.out.println(Utils.byteToBinary(key[j]));
-                // System.out.println(Utils.byteToBinary(paddedMessage[i + j]));
-                // System.out.println("=");
-                // System.out.println(Utils.byteToBinary(encrypted[i + j]));
+                 System.out.println("---------------------");
+                 System.out.println(Utils.byteToBinary(key[j]));
+                 System.out.println(Utils.byteToBinary(paddedMessage[i + j]));
+                 System.out.println("=");
+                System.out.println(Utils.byteToBinary(encrypted[i + j]));
 
             }
         }
@@ -79,7 +79,6 @@ public class XORCipher implements Cipher {
         return paddedMessage;
     }
 
-    @Override
     public String decrypt(final String base64Message) throws DecryptingException {
 
         final byte[] base64Decoded = Base64.getDecoder().decode(base64Message);

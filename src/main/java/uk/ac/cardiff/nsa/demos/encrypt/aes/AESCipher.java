@@ -6,7 +6,6 @@ import uk.ac.cardiff.nsa.demos.encrypt.DecryptingException;
 
 public class AESCipher implements Cipher {
 
-    @Override
     public String encrypt(final String message) {
 
         for (final byte b : message.getBytes()) {
@@ -16,7 +15,6 @@ public class AESCipher implements Cipher {
         return "";
     }
 
-    @Override
     public String decrypt(final String base64Message) throws DecryptingException {
         // TODO Auto-generated method stub
         return null;

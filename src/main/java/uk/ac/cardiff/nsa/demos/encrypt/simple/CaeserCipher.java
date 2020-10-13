@@ -13,20 +13,18 @@ public class CaeserCipher implements Cipher {
         shift = shiftAmount;
     }
 
-    @Override
     public String encrypt(final String message) {
 
         final StringBuilder encrypted = new StringBuilder();
 
         for (int i = 0; i < message.length(); i++) {
             final char newChar = (char) (((message.charAt(i) + shift) - 97) % 26 + 97);
-            System.out.println("Old Char [" + (int) message.charAt(i) + "], shifted [" + newChar + "]");
+            System.out.println("Old Char [" + message.charAt(i) + "], shifted [" + newChar + "]");
             encrypted.append(newChar);
         }
         return encrypted.toString();
     }
-
-    @Override
+    
     public String decrypt(final String message) throws DecryptingException {
 
         final StringBuilder encrypted = new StringBuilder();

@@ -15,7 +15,7 @@ import org.apache.commons.lang3.RandomStringUtils;
 public class HashUtils {
 
     public static void main(final String args[]) {
-        System.out.println("Running...");
+        System.out.println("Running..."+1.5819613093806715e+55%64);
 
         System.out.println(constructHash("Great") + ": Original");
         System.out.println(constructHash("Greet") + ": Very similar to original, so patterns exist");
@@ -24,7 +24,7 @@ public class HashUtils {
 
         System.out.println(constructCryptographicHash("Greet"));
 
-        // findCollision(constructHash("Great"));
+         findCollision(constructHash("Great"));
 
     }
 
@@ -77,6 +77,7 @@ public class HashUtils {
         final int factor = 31;
         int h = 0;
         for (final byte v : message.getBytes()) {
+            //0xff is 255 as an int, or all 1's in a byte. Makes all ints positive
             h = factor * h + (v & 0xff);
         }
         return Integer.toHexString(h);

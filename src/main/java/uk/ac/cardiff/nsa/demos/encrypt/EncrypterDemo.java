@@ -11,11 +11,11 @@ public class EncrypterDemo {
 
     public static void main(final String args[]) throws DecryptingException {
 
-        // doCaeserCipher();
+         //doCaeserCipher();
 
-        // doXORCipher();
+         doXORCipher();
 
-        doAESCipher();
+        //doAESCipher();
     }
 
     private static void doAESCipher() throws DecryptingException {
@@ -26,9 +26,9 @@ public class EncrypterDemo {
 
     private static void doCaeserCipher() throws DecryptingException {
 
-        final Cipher caeserCipher = new CaeserCipher(5);
+        final Cipher caeserCipher = new CaeserCipher(6);
 
-        final String encrypted = caeserCipher.encrypt("abcdefghijklmnopqrstuvwxyz");
+        final String encrypted = caeserCipher.encrypt("this is a cool input this");
 
         System.out.println("Encrypted [" + encrypted + "]");
 
