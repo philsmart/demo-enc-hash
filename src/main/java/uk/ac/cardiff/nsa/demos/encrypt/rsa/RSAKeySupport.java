@@ -49,7 +49,7 @@ public class RSAKeySupport {
                 .unordered()
                 .parallel()
                 .takeWhile(num -> maxTeast.compareTo(num) == 1)
-                .peek(p->{if (p.mod(BigInteger.valueOf(1000001)).equals(BigInteger.ZERO)){ System.out.println("checking:"+p);}})
+                .peek(p->{if (p.mod(BigInteger.valueOf(1000001)).equals(BigInteger.ZERO)){ System.out.println("checking:"+p.bitLength());}})
                 .filter(p->n.mod(p).equals(BigInteger.ZERO)).findAny().isPresent();
         //bigIntStream.forEach(p ->{if (p.mod(BigInteger.valueOf(1000001)).equals(BigInteger.ZERO)){ System.out.println("checking:"+p);}});
         
