@@ -2,17 +2,18 @@
 package uk.ac.cardiff.nsa.demos.encrypt.rsa;
 
 import java.math.BigInteger;
-import java.security.SecureRandom;
+import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
-import javax.annotation.concurrent.GuardedBy;
-
 public class RSAKeySupport {
     
-
+    /** the prime number e, nearly always this value. Must be less then carmicheal */
+    //public static final BigInteger e = BigInteger.valueOf(65537);
+    public static final int e = 11;
 
     // checks whether an int is prime or not.
     public static boolean isPrime(int n) {
@@ -43,9 +44,8 @@ public class RSAKeySupport {
      */
     //TODO does it work e.g. 608771 , 729109?
     public static boolean isPrime(BigInteger n) {
-        long baseTime = System.currentTimeMillis();
         
-        //devides by 2 is never prime.
+        //divides by 2 is never prime.
         if (n.mod(BigInteger.TWO).equals(BigInteger.ZERO)) {
             System.out.println("Divides by 2");
             return false;
@@ -57,13 +57,25 @@ public class RSAKeySupport {
                // .unordered()
                 .parallel()
                 .takeWhile(num -> maxTeast.compareTo(num) == 1)
-                .peek(p->{if (p.mod(BigInteger.valueOf(1)).equals(BigInteger.ZERO)){ System.out.println(p+" checking:"+p.bitLength());}})
+                //.peek(p->{if (p.mod(BigInteger.valueOf(1)).equals(BigInteger.ZERO)){ System.out.println(p+" checking:"+p.bitLength());}})
                 .filter(p->n.mod(p).equals(BigInteger.ZERO)).findAny();
         if (exactDivisor.isPresent()) {
             System.out.println("Divisor: "+exactDivisor.get());
         }
         return exactDivisor.isEmpty();
 
+    }
+    
+    public static BigInteger getPrimeNumber(int length) {
+        boolean foundPrime = false;
+        BigInteger p = null;
+        while(!foundPrime) {
+            p = generateRandomNumber(length);
+            if (isPrime(p)) {
+                foundPrime=true;
+            }            
+        }
+        return p;
     }
     
     public static BigInteger[] findFactors(final BigInteger n) {
@@ -82,23 +94,23 @@ public class RSAKeySupport {
                 
                 final BigInteger otherFactor = n.divide(bi);
                 // This only works because we know RSA pub keys are a composite of only two primes.
-                // Otherwise some numbers will have more than one prime number factors.
-                // we could check the other factor is prime by seeing if it its least factor of a 
+                // Otherwise some numbers will have more than one prime number factor.
+                // we could check the other factor is prime by seeing if its least factor of a 
                 // pair is greater than the cube root of the number, then the greater factor is prime.
                 // https://trans4mind.com/personal_development/mathematics/numberTheory/divisibilityBruteForce.htm
+                // In other words, we should check these factors are themselves prime and we do not. If not
+                // we need to break the factors down further to their primes.
                 //System.out.println("Prime Factors "+bi+":"+otherFactor);
                 p = bi;
                 r = otherFactor;
                 break;
             }
         }
-        
-        
         return new BigInteger[] {p,r};
     }
 
     /**
-     * Generate a public number from the multiplcation of two secret primes p and q. 
+     * Generate a public number (a composite number) from the multiplcation of two secret primes p and q. 
      * finding the two primes that made this number (prime number factorisation) is hard if these
      * two numbers (p and q) are large - so less chance of finding the secret components. 
      * 
@@ -134,6 +146,64 @@ public class RSAKeySupport {
         return BigInteger.valueOf(rnd);
     }
     
+    /**
+     * A very slow alogrithm for finding the Carmichael's Totient Lowest Common Multiple.
+     * 
+     * @param p the first prime factor
+     * @param q the second prime factor
+     * @return the lowest common multiple - the private key.
+     */
+    public static BigInteger computeCarmichaelsTotientFromPublicFactors(final BigInteger p, final BigInteger q) {
+        
+        final BigInteger pMinus = p.subtract(BigInteger.valueOf(1));
+        final BigInteger qMinus = q.subtract(BigInteger.valueOf(1));
+        
+        System.out.println("P-1: "+pMinus+" Q-1: "+qMinus);
+        
+        // find the smallest positive integer that is perfectly divisible by both pMinus and qMinus.
+        // this gives part of the private key computation
+        final BigInteger higher = pMinus.max(qMinus);
+        final BigInteger lower = pMinus.min(qMinus);
+        System.out.println("Higher:"+higher+" Lower:"+lower);
+        
+        BigInteger lcm = higher;
+        while (!lcm.mod(lower).equals(BigInteger.ZERO)) {
+            lcm = lcm.add(higher);
+            //System.out.println(lcm);
+        }
+        System.out.println("carmichaelsTotient (Part of Private Key - slow): "+lcm);
+        
+        return lcm;
+        
+    }
+    
+    /**
+     * A much faster alogrithm for finding the Carmichaels Totient from the Lowest Common Multiple using methods on the
+     * BigInteger class.
+     * 
+     * @param p the first prime factor
+     * @param q the second prime factor
+     * @return the lowest common multiple - the private key.
+     */
+    public static BigInteger computeCarmichaelsTotientFromPublicFactorsFast(final BigInteger p, final BigInteger q) {
+        
+        final BigInteger pMinus = p.subtract(BigInteger.valueOf(1));
+        final BigInteger qMinus = q.subtract(BigInteger.valueOf(1));
+        
+        BigInteger gcd = pMinus.gcd(qMinus);
+        BigInteger absProduct = pMinus.multiply(qMinus).abs();
+        BigInteger lcm = absProduct.divide(gcd);
+        System.out.println("carmichaelsTotient (Part Of Private Key - fast):"+lcm);
+        return lcm;
+    }
+    
+    private static int computePrivateKey(final BigInteger carmichaelsTotient) {
+        // compute the modular inverse of e and the carmichaelsTotient
+        return BigInteger.valueOf(e).modInverse(carmichaelsTotient).intValue();
+    }
+        
+    
+    
    /**
     * At maxium, supports 24 bit primes. So 48 bit RSA. If we go bigger, we would
     * need faster ways to generate the primes, and faster methods e.g. probablistic
@@ -144,18 +214,23 @@ public class RSAKeySupport {
     */
     public static void main(String args[]) {
         
-        //check check things work
-        BigInteger primeOne = BigInteger.probablePrime(24, new SecureRandom());
-        BigInteger primeTwo = BigInteger.probablePrime(24, new SecureRandom());
+        //generate primes
+//        BigInteger primeOne = BigInteger.probablePrime(24, new SecureRandom());
+//        BigInteger primeTwo = BigInteger.probablePrime(24, new SecureRandom());
+        
+        final BigInteger primeOne = getPrimeNumber(10);
+        final BigInteger primeTwo = getPrimeNumber(10);
+       
+        
         System.out.println("First Bin: "+primeOne.toString(2)+" Decimal: "+primeOne+" length: "+primeOne.bitLength());
         System.out.println("Second Bin: "+primeTwo.toString(2)+" Decimal: "+primeTwo+" length: "+primeTwo.bitLength());
      // The public key is a composite number e.g. two primes multiplied together.
-        BigInteger compositeN = primeOne.multiply(primeTwo);        
-        System.out.println("Composite Bin: "+compositeN.toString(2)+" Decimal: "+compositeN+" length: "+compositeN.bitLength());
+        BigInteger compositeN = generatePublicComponentN(primeOne,primeTwo);        
+        System.out.println("Composite Bin (Part of Public Key): "+compositeN.toString(2)+" Decimal: "+compositeN+" length: "+compositeN.bitLength());
 
-//        final boolean isPrime = RSAKeySupport.isPrime(primeOne);
+        final boolean isPrime = isPrime(primeOne);
 //        assert isPrime == true;
-//        System.out.println("Is Prime: "+isPrime);
+        System.out.println("Is Prime: "+isPrime);
 //        System.out.println("------------------");
 //        
 //        System.out.println("Should not be prime (divides 257), is prime = "+isPrime(BigInteger.valueOf(608771)));
@@ -165,23 +240,26 @@ public class RSAKeySupport {
         final BigInteger[] factors = findFactors(compositeN);
         System.out.println("Prime Factors "+factors[0]+":"+factors[1]);
         
+        //the Carmichael’s Totient which is part of the private key
+        final BigInteger carmichaelsTotient = computeCarmichaelsTotientFromPublicFactors(primeOne,primeTwo);
         
+        //this will be an int? otherwise wow. 
+        final int privateKey = computePrivateKey(carmichaelsTotient);
         
-        //now do it ourselves. Get random number of certain size, and check it
-        //if not prime, repeat until you find one. assume 48bit RSA, so 2 24bit primes.
+        System.out.println("PrivateKey: "+privateKey);
         
-//        boolean foundPrime = false;
-//        BigInteger p = null;
-//        while(!foundPrime) {
-//            p = generateRandomNumber(20);
-//            if (isPrime(p)) {
-//                foundPrime=true;
-//            }            
-//        }
-//        System.out.println("Found prime P: "+p);
+        int messageAsInt = ByteBuffer.wrap("mess".getBytes(Charset.forName("UTF-8"))).getInt();
+        //now compute encrypted message
+        BigInteger message = BigInteger.valueOf(183536);
+        System.out.println("MESSAGE: "+message);
+        BigInteger cipherText = message.pow(e).mod(compositeN);
+        System.out.println("CIPHER TEXT: "+cipherText);
         
+        BigInteger messageFromCipher = cipherText.pow(privateKey).mod(compositeN);
+        System.out.println("DECRYPTED TEXT: "+messageFromCipher);
         
-
+        //No padding used to prevent padding attacks.
+        
       
     }
 
